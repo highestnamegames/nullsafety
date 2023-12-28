@@ -1,5 +1,15 @@
-#ifndef NULLSAFETY_HEADERGUARD
-#define NULLSAFETY_HEADERGUARD
+#ifndef HNG_NULLSAFETY_HEADERGUARD
+#define HNG_NULLSAFETY_HEADERGUARD
+//
+//	Author:		Elijah Shadbolt
+//	Date:		28 Dec 2023
+//	Licence:	MIT
+//	GitHub:		https://github.com/highestnamegames/nullsafety
+//	Version:	v1.0.1
+//
+//	Summary:
+//		C++ header only library for null safety utilities, including notnull and derefnullchecked.
+//
 
 #include <memory>
 #include <stdexcept>
@@ -309,4 +319,4 @@ namespace hng {
     }
 }
 
-#endif //~ NULLSAFETY_HEADERGUARD
+#endif //~ HNG_NULLSAFETY_HEADERGUARD

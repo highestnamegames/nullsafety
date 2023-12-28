@@ -148,7 +148,7 @@ namespace hng {
         void run_tests() {
             std::vector<std::function<bool()>> tests;
 
-            tests.emplace_back([] { return test("derefnullchecked should throw if null is dereferenced at runtime", [](auto const& test_name) {
+            tests.emplace_back([] { return test("derefnullchecked should throw if null is dereferenced at runtime", [](auto const& /*test_name*/) {
                 {
                     int a = 5;
                     auto p = hng::nullsafety::derefnullchecked(&a);
@@ -156,18 +156,20 @@ namespace hng {
                     if (a != 6)
                         return false;
 
-                    bool threw = false;
                     try {
                         p = nullptr;
-                        int b = *p;
+#pragma warning(push)
+#pragma warning(disable : 4189)
+                        int i = *p;
+#pragma warning(pop)
+                        return false;
                     }
                     catch (hng::nullsafety::nullptr_error const&) {
-                        threw = true;
                     }
-                    return threw;
+                    return true;
                 }
                 }); });
-            tests.emplace_back([] { return test("notnull smart pointer should throw if constructed from null at runtime", [](auto const& test_name) {
+            tests.emplace_back([] { return test("notnull smart pointer should throw if constructed from null at runtime", [](auto const& /*test_name*/) {
                 {
                     int a = 5;
                     hng::nullsafety::notnull p = &a;
@@ -185,28 +187,27 @@ namespace hng {
                     if (c != 3)
                         return false;
 
-                    bool threw = false;
                     try {
                         v = static_cast<std::shared_ptr<int>>(nullptr);
+                        return false;
                     }
                     catch (hng::nullsafety::nullptr_error const&) {
-                        threw = true;
                     }
-                    return threw;
+                    return true;
                 }
                 }); });
+            tests.emplace_back([] { return test("notnull shared_ptr move constructor is actually copy constructor because move would empty the original", [](auto const& /*test_name*/) {
+                {
 #pragma warning(push)
 #pragma warning(disable : 26800)
-            tests.emplace_back([] { return test("notnull shared_ptr move constructor is actually copy constructor because move would empty the original", [](auto const& test_name) {
-                {
                     hng::nullsafety::notnull p = std::make_shared<int>(2);
                     auto q = std::move(p);
                     auto r = std::move(q);
                     return *p == 2 && *q == 2 && *r == 2;
+#pragma warning(pop)
                 }
                 }); });
-#pragma warning(pop)
-            tests.emplace_back([] { return test("notnull unique_ptr", [](auto const& test_name) {
+            tests.emplace_back([] { return test("notnull unique_ptr", [](auto const& /*test_name*/) {
                 {
                     hng::nullsafety::notnull u = std::make_unique<int>(6);
                     //auto v = std::move(u); // does not compile
@@ -214,7 +215,7 @@ namespace hng {
                     return *v == 6;
                 }
                 }); });
-            tests.emplace_back([] { return test("notnull unique_ptr exchange", [](auto const& test_name) {
+            tests.emplace_back([] { return test("notnull unique_ptr exchange", [](auto const& /*test_name*/) {
                 {
                     hng::nullsafety::notnull u = std::make_unique<int>(4);
 
@@ -234,7 +235,7 @@ namespace hng {
                     return *u == 5 && *v == 6 && *w == 7 && *x == 4;
                 }
                 }); });
-            tests.emplace_back([] { return test("as_span_of_notnull", [](auto const& test_name) {
+            tests.emplace_back([] { return test("as_span_of_notnull", [](auto const& /*test_name*/) {
                 {
                     std::array a{ 0, 1, 2, 3, 4 };
                     std::array const v{ &a[0], &a[2], &a[1], &a[3], &a[4] };
@@ -244,7 +245,7 @@ namespace hng {
                     return *nns[0] == 0 && *nns[1] == 2 && *nns[2] == 1 && *nns[3] == 3 && *nns[4] == 4;
                 }
                 }); });
-            tests.emplace_back([] { return test("as_span_of_notnull mutable", [](auto const& test_name) {
+            tests.emplace_back([] { return test("as_span_of_notnull mutable", [](auto const& /*test_name*/) {
                 {
                     std::array a{ 0, 1, 2, 3, 4 };
                     std::array v{ &a[0], &a[2], &a[1], &a[3], &a[4] };
@@ -258,22 +259,21 @@ namespace hng {
                         ;
                 }
                 }); });
-            tests.emplace_back([] { return test("calling as_span_of_notnull with a span that contains null elements should throw", [](auto const& test_name) {
+            tests.emplace_back([] { return test("calling as_span_of_notnull with a span that contains null elements should throw", [](auto const& /*test_name*/) {
                 {
                     std::array a{ 0, 1, 2, 3, 4 };
                     std::array v{ &a[0], &a[2], static_cast<int*>(nullptr), &a[1], &a[3], &a[4] };
                     std::span s = v;
-                    bool threw = false;
                     try {
                         auto nns = hng::nullsafety::as_span_of_notnull(s);
+                        return false;
                     }
                     catch (hng::nullsafety::nullptr_error const&) {
-                        threw = true;
                     }
-                    return threw;
+                    return true;
                 }
                 }); });
-            tests.emplace_back([] { return test("as_span_of_derefnullchecked", [](auto const& test_name) {
+            tests.emplace_back([] { return test("as_span_of_derefnullchecked", [](auto const& /*test_name*/) {
                 {
                     std::array a{ 0, 1, 2, 3, 4 };
                     std::array v{ &a[0], &a[2], &a[1], static_cast<int*>(nullptr), &a[3], &a[4] };
@@ -284,18 +284,20 @@ namespace hng {
                         )) {
                         return false;
                     }
-                    bool threw = false;
                     auto p = dcs[3];
                     try {
-                        int x = *p;
+#pragma warning(push)
+#pragma warning(disable : 4189)
+                        int i = *p;
+#pragma warning(pop)
+                        return false;
                     }
                     catch (hng::nullsafety::nullptr_error const&) {
-                        threw = true;
                     }
-                    return threw;
+                    return true;
                 }
                 }); });
-            tests.emplace_back([] { return test("convert reference_wrapper to notnull", [](auto const& test_name) {
+            tests.emplace_back([] { return test("convert reference_wrapper to notnull", [](auto const& /*test_name*/) {
                 {
                     struct S {
                         static constexpr void f(int* p) {
@@ -309,7 +311,7 @@ namespace hng {
                     return a == 3;
                 }
                 }); });
-            tests.emplace_back([] { return test("notnull int", [](auto const& test_name) {
+            tests.emplace_back([] { return test("notnull int", [](auto const& /*test_name*/) {
                 {
                     hng::nullsafety::notnull<int> x(3);
                     hng::nullsafety::notnull<int> z(-4);
@@ -328,7 +330,7 @@ namespace hng {
                     return x == 3 && z == -4;
                 }
                 }); });
-            tests.emplace_back([] { return test("notnull function parameter", [](auto const& test_name) {
+            tests.emplace_back([] { return test("notnull function parameter", [](auto const& /*test_name*/) {
                 {
                     int a[]{ 10, 20, 30 };
                     hng::nullsafety::notnull<int*> x(&a[0]);
@@ -336,7 +338,7 @@ namespace hng {
                     return x == &a[2] && a[0] == 11 && a[1] == 21 && a[2] == 30;
                 }
                 }); });
-            tests.emplace_back([] { return test("throw_if_null returns pointer", [](auto const& test_name) {
+            tests.emplace_back([] { return test("throw_if_null returns pointer", [](auto const& /*test_name*/) {
                 {
                     struct S {
                         static constexpr void f(int* p) {
@@ -361,7 +363,7 @@ namespace hng {
                     return true;
                 }
                 }); });
-            tests.emplace_back([] { return test("readme example", [](auto const& test_name) {
+            tests.emplace_back([] { return test("readme example", [](auto const& /*test_name*/) {
                 {
                     int x = 2;
                     int* y = &x;
