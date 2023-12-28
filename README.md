@@ -93,3 +93,9 @@ cmake ..
 3. In the Solution Explorer, right click `nullsafety_tests` | Set as Startup Project
 
 4. Debug | Start Debugging (F5)
+
+# Compatibility
+
+Note: This has only been tested on Windows with Visual Studio MSVC compiler with standard C++20 language version.
+
+PR's are welcome; we're looking for instructions on how to get started using g++, clang; on linux, mac.
