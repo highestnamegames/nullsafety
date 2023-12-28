@@ -16,10 +16,10 @@ namespace hng {
 
         static_assert(sizeof(hng::nullsafety::notnull<int*>) == sizeof(int*));
         static_assert(sizeof(hng::nullsafety::notnull<std::shared_ptr<long>>) == sizeof(std::shared_ptr<long>));
-        static_assert(sizeof(hng::nullsafety::derefchecked<int*>) == sizeof(int*));
+        static_assert(sizeof(hng::nullsafety::derefnullchecked<int*>) == sizeof(int*));
         struct SampleDtor {};
-        static_assert(sizeof(hng::nullsafety::derefchecked<std::unique_ptr<long, SampleDtor>>) == sizeof(std::unique_ptr<long, SampleDtor>));
-        static_assert(alignof(hng::nullsafety::derefchecked<std::unique_ptr<long, SampleDtor>>) == alignof(std::unique_ptr<long, SampleDtor>));
+        static_assert(sizeof(hng::nullsafety::derefnullchecked<std::unique_ptr<long, SampleDtor>>) == sizeof(std::unique_ptr<long, SampleDtor>));
+        static_assert(alignof(hng::nullsafety::derefnullchecked<std::unique_ptr<long, SampleDtor>>) == alignof(std::unique_ptr<long, SampleDtor>));
 
         static constexpr int const static_assertion_variable_x = 5;
         static_assert([]() constexpr {
@@ -70,9 +70,9 @@ namespace hng {
 
         static_assert([]() constexpr {
             std::array a{ 10, 20 };
-            hng::nullsafety::derefchecked p = &a[0];
-            hng::nullsafety::derefchecked q = &a[1];
-            hng::nullsafety::derefchecked<int*> r = nullptr;
+            hng::nullsafety::derefnullchecked p = &a[0];
+            hng::nullsafety::derefnullchecked q = &a[1];
+            hng::nullsafety::derefnullchecked<int*> r = nullptr;
             return (p <=> q) != 0
                 && (p <=> &a[0]) == 0
                 && p < q
@@ -85,11 +85,11 @@ namespace hng {
 
         static_assert([]() constexpr {
             std::array a{ 10, 20 };
-            hng::nullsafety::derefchecked p0 = &a[0];
-            hng::nullsafety::derefchecked p1 = &a[1];
+            hng::nullsafety::derefnullchecked p0 = &a[0];
+            hng::nullsafety::derefnullchecked p1 = &a[1];
             auto q0 = hng::nullsafety::notnull(&a[0]);
             auto q1 = hng::nullsafety::notnull(&a[1]);
-            hng::nullsafety::derefchecked<int*> r = nullptr;
+            hng::nullsafety::derefnullchecked<int*> r = nullptr;
             return p0 == q0 && p1 == q1 && p0 != q1 && p1 != q0 && p0 != p1 && q0 != q1
                 && p0 < q1 && p1 > q0 && p1 >= q0
                 && (q1 <=> q0) > 0
@@ -148,10 +148,10 @@ namespace hng {
         void run_tests() {
             std::vector<std::function<bool()>> tests;
 
-            tests.emplace_back([] { return test("derefchecked should throw if null is dereferenced at runtime", [](auto const& test_name) {
+            tests.emplace_back([] { return test("derefnullchecked should throw if null is dereferenced at runtime", [](auto const& test_name) {
                 {
                     int a = 5;
-                    auto p = hng::nullsafety::derefchecked(&a);
+                    auto p = hng::nullsafety::derefnullchecked(&a);
                     *p += 1;
                     if (a != 6)
                         return false;
@@ -195,6 +195,17 @@ namespace hng {
                     return threw;
                 }
                 }); });
+#pragma warning(push)
+#pragma warning(disable : 26800)
+            tests.emplace_back([] { return test("notnull shared_ptr move constructor is actually copy constructor because move would empty the original", [](auto const& test_name) {
+                {
+                    hng::nullsafety::notnull p = std::make_shared<int>(2);
+                    auto q = std::move(p);
+                    auto r = std::move(q);
+                    return *p == 2 && *q == 2 && *r == 2;
+                }
+                }); });
+#pragma warning(pop)
             tests.emplace_back([] { return test("notnull unique_ptr", [](auto const& test_name) {
                 {
                     hng::nullsafety::notnull u = std::make_unique<int>(6);
@@ -207,7 +218,7 @@ namespace hng {
                 {
                     hng::nullsafety::notnull u = std::make_unique<int>(4);
 
-                    // option 1: hng::nullsafety::exchange(notnull, newVal) returns hng::nullsafety::derefchecked<P>
+                    // option 1: hng::nullsafety::exchange(notnull, newVal) returns hng::nullsafety::derefnullchecked<P>
                     using std::exchange;
                     hng::nullsafety::notnull v = exchange(u, std::make_unique<int>(5));
 
@@ -262,12 +273,12 @@ namespace hng {
                     return threw;
                 }
                 }); });
-            tests.emplace_back([] { return test("as_span_of_derefchecked", [](auto const& test_name) {
+            tests.emplace_back([] { return test("as_span_of_derefnullchecked", [](auto const& test_name) {
                 {
                     std::array a{ 0, 1, 2, 3, 4 };
                     std::array v{ &a[0], &a[2], &a[1], static_cast<int*>(nullptr), &a[3], &a[4] };
                     std::span s = v;
-                    auto dcs = hng::nullsafety::as_span_of_derefchecked(s);
+                    auto dcs = hng::nullsafety::as_span_of_derefnullchecked(s);
                     if (!(
                         *dcs[0] == 0 && *dcs[1] == 2 && *dcs[2] == 1 && *dcs[4] == 3 && *dcs[5] == 4
                         )) {
@@ -325,6 +336,31 @@ namespace hng {
                     return x == &a[2] && a[0] == 11 && a[1] == 21 && a[2] == 30;
                 }
                 }); });
+            tests.emplace_back([] { return test("throw_if_null returns pointer", [](auto const& test_name) {
+                {
+                    struct S {
+                        static constexpr void f(int* p) {
+                            *p = 2;
+                        }
+                    };
+                    int a = 0;
+                    int* p = &a;
+                    S::f(hng::nullsafety::throw_if_null(p));
+                    if (a != 2)
+                        return false;
+
+                    p = nullptr;
+                    try {
+                        S::f(hng::nullsafety::throw_if_null(p));
+                        return false;
+                    }
+                    catch (hng::nullsafety::nullptr_error const&) {
+                        if (a != 2)
+                            return false;
+                    }
+                    return true;
+                }
+                }); });
             tests.emplace_back([] { return test("readme example", [](auto const& test_name) {
                 {
                     int x = 2;
@@ -354,7 +390,7 @@ namespace hng {
                     catch (hng::nullsafety::nullptr_error const&) {
                     }
 
-                    hng::nullsafety::derefchecked<int*> q = nullptr;
+                    hng::nullsafety::derefnullchecked<int*> q = nullptr;
                     // ^ ok
 
                     try {
